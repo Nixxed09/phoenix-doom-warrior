@@ -1,4 +1,5 @@
 import { WeaponType, AmmoType } from './Weapon.js';
+import { GameState } from './Game.js';
 
 export class UI {
     constructor(game) {
@@ -699,11 +700,11 @@ export class UI {
         switch (action) {
             case 'new-game':
                 this.hideMenu();
-                this.game.setState(this.game.GameState.PLAYING);
+                this.game.setState(GameState.PLAYING);
                 break;
             case 'resume':
                 this.hideMenu();
-                this.game.setState(this.game.GameState.PLAYING);
+                this.game.setState(GameState.PLAYING);
                 break;
             case 'quit':
                 if (confirm('Are you sure you want to quit?')) {
@@ -711,7 +712,7 @@ export class UI {
                 }
                 break;
             case 'quit-to-menu':
-                this.game.setState(this.game.GameState.MENU);
+                this.game.setState(GameState.MENU);
                 break;
             case 'restart':
                 this.hideMenu();
@@ -743,7 +744,7 @@ export class UI {
                 this.menuStack.pop();
                 const previousMenu =
                     this.menuStack[this.menuStack.length - 1] ||
-                    (this.game.state === this.game.GameState.PAUSED ? 'pause' : 'main');
+                    (this.game.state === GameState.PAUSED ? 'pause' : 'main');
                 this.showMenu(previousMenu);
                 break;
         }
@@ -1168,7 +1169,7 @@ export class UI {
         this.currentMenu = null;
         this.menuStack = [];
 
-        if (this.game.state === this.game.GameState.PLAYING) {
+        if (this.game.state === GameState.PLAYING) {
             this.showHUD();
             this.crosshair.style.display = 'block';
         }
