@@ -1,6 +1,6 @@
 {
   "name": "phoenix-doom-warrior",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A 3D DOOM-style FPS game built with Three.js",
   "type": "module",
   "scripts": {
