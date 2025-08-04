@@ -51,3 +51,4 @@ public/icon-close.png
 # Bundle analysis
 stats.html
 bundle-stats.json
+.vercel
