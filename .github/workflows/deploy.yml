@@ -1,0 +1,161 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Build project
+      run: npm run build
+    
+    - name: Analyze bundle size
+      run: npm run analyze -- --json > bundle-stats.json
+    
+    - name: Upload bundle stats
+      uses: actions/upload-artifact@v3
+      with:
+        name: bundle-stats
+        path: bundle-stats.json
+
+  deploy-preview:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+    
+    - name: Pull Vercel Environment Information
+      run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+    
+    - name: Build Project Artifacts
+      run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+    
+    - name: Deploy Project Artifacts to Vercel
+      run: |
+        vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} > deployment-url.txt
+        echo "Preview URL: $(cat deployment-url.txt)"
+    
+    - name: Comment PR with deployment URL
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const url = fs.readFileSync('deployment-url.txt', 'utf8').trim();
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🚀 Preview deployment ready!\n\n🎮 Play the game: ${url}\n\n📊 [Bundle analysis](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+          });
+
+  deploy-production:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
+    
+    - name: Pull Vercel Environment Information
+      run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+    
+    - name: Build Project Artifacts
+      run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+    
+    - name: Deploy Project Artifacts to Vercel
+      run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  create-release:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release]')
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build for release
+      run: npm run build
+    
+    - name: Create release archive
+      run: |
+        zip -r phoenix-doom-warrior.zip dist/
+        tar -czf phoenix-doom-warrior.tar.gz dist/
+    
+    - name: Get version from package.json
+      id: version
+      run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        name: Phoenix DOOM Warrior v${{ steps.version.outputs.version }}
+        body: |
+          ## 🎮 Phoenix DOOM Warrior v${{ steps.version.outputs.version }}
+          
+          ### What's New
+          - Check commit messages for details
+          
+          ### Play Online
+          🌐 https://phoenix-doom-warrior.vercel.app
+          
+          ### Download
+          - 📦 [ZIP Archive](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/phoenix-doom-warrior.zip)
+          - 📦 [TAR.GZ Archive](https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/phoenix-doom-warrior.tar.gz)
+          
+          ### Installation
+          1. Download and extract the archive
+          2. Serve the `dist` folder with any web server
+          3. Open in a modern web browser
+          
+          ### System Requirements
+          - Modern web browser with WebGL support
+          - 4GB RAM recommended
+          - Hardware acceleration enabled
+        files: |
+          phoenix-doom-warrior.zip
+          phoenix-doom-warrior.tar.gz
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
