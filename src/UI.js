@@ -1195,6 +1195,11 @@ export class UI {
         });
     }
 
+    showError(text) {
+        console.error('UI Error:', text);
+        this.showMessage(`❌ ${text}`, 5000);
+    }
+
     showDamageIndicator(direction) {
         const angle = direction + Math.PI;
         const distance = 200;

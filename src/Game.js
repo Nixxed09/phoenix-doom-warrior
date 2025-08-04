@@ -65,73 +65,135 @@ export class Game {
         this.accumulator = 0;
         this.fixedTimeStep = 1 / 60;
         this.maxAccumulator = 0.2;
+        this.firstFrameRendered = false;
     }
 
     async init() {
-        console.log('Game init started...');
-        console.log('Loading settings...');
-        this.loadSettings();
-        console.log('Setting up renderer...');
-        this.setupRenderer();
-        console.log('Setting up scene...');
-        this.setupScene();
-        this.setupLighting();
-        this.setupSkybox();
-        console.log('Creating UI...');
-        this.ui = new UI(this);
+        try {
+            console.log('Game init started...');
+            console.log('Loading settings...');
+            this.loadSettings();
+            console.log('Setting up renderer...');
+            this.setupRenderer();
+            this.setupScene();
+            this.setupLighting();
+            this.setupSkybox();
+            console.log('Creating UI...');
+            this.ui = new UI(this);
 
-        console.log('Loading assets...');
-        await this.loadAssets();
+            console.log('Loading assets...');
+            await this.loadAssets();
 
-        console.log('Creating player...');
-        this.player = new Player(this.camera, this.scene);
-        console.log('Creating level...');
-        this.level = new Level(this.scene);
-        this.audio = new Audio();
+            console.log('Creating player...');
+            this.player = new Player(this.camera, this.scene);
+            console.log('Creating level...');
+            this.level = new Level(this.scene);
+            this.audio = new Audio();
 
-        this.audio.setMasterVolume(this.settings.soundVolume);
-        this.audio.setMusicVolume(this.settings.musicVolume);
+            this.audio.setMasterVolume(this.settings.soundVolume);
+            this.audio.setMusicVolume(this.settings.musicVolume);
 
-        this.setupEventListeners();
+            this.setupEventListeners();
 
-        console.log('Starting new game...');
-        // Skip menu and start game immediately
-        this.startNewGame();
+            console.log('Starting new game...');
+            // Skip menu and start game immediately
+            this.startNewGame();
 
-        console.log('Starting game loop...');
-        this.gameLoop();
-        console.log('Game init completed!');
+            console.log('Starting game loop...');
+            this.gameLoop();
+            console.log('Game init completed!');
+        } catch (error) {
+            console.error('Game initialization failed:', error);
+            this.showInitError(error);
+        }
+    }
+
+    showInitError(error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border: 2px solid #ff0000;
+            font-family: monospace;
+            font-size: 16px;
+            z-index: 10000;
+            max-width: 80%;
+            text-align: center;
+        `;
+        errorDiv.innerHTML = `
+            <h2>🎮 Game Initialization Failed</h2>
+            <p>Error: ${error.message}</p>
+            <p>Check browser console for details</p>
+            <button onclick="location.reload()" style="
+                background: #ff0000;
+                color: white;
+                border: 2px solid white;
+                padding: 10px 20px;
+                margin-top: 10px;
+                cursor: pointer;
+                font-family: monospace;
+            ">Reload Game</button>
+        `;
+        document.body.appendChild(errorDiv);
     }
 
     setupRenderer() {
-        const canvas = document.getElementById('game-canvas');
-        this.renderer = new THREE.WebGLRenderer({
-            canvas,
-            antialias: this.settings.graphics !== 'low',
-            powerPreference: 'high-performance'
-        });
+        try {
+            console.log('Setting up renderer...');
+            const canvas = document.getElementById('game-canvas');
+            if (!canvas) {
+                throw new Error('Game canvas not found!');
+            }
+            console.log('Canvas found:', canvas);
+            
+            this.renderer = new THREE.WebGLRenderer({
+                canvas,
+                antialias: this.settings.graphics !== 'low',
+                powerPreference: 'high-performance'
+            });
+            
+            console.log('WebGL renderer created:', this.renderer);
+            
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.shadowMap.enabled = this.settings.graphics !== 'low';
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            this.renderer.toneMappingExposure = 1.0;
 
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = this.settings.graphics !== 'low';
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        this.renderer.toneMappingExposure = 1.0;
-
-        this.camera = new THREE.PerspectiveCamera(
-            this.settings.fov,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
+            this.camera = new THREE.PerspectiveCamera(
+                this.settings.fov,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            
+            console.log('Camera created:', this.camera);
+            console.log('Renderer setup complete');
+        } catch (error) {
+            console.error('Renderer setup failed:', error);
+            throw error;
+        }
     }
 
     setupScene() {
-        this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.FogExp2(0x000000, 0.02);
+        try {
+            console.log('Setting up scene...');
+            this.scene = new THREE.Scene();
+            this.scene.fog = new THREE.FogExp2(0x000000, 0.02);
 
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
-        this.scene.add(ambientLight);
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+            this.scene.add(ambientLight);
+            console.log('Scene created with ambient light:', this.scene);
+        } catch (error) {
+            console.error('Scene setup failed:', error);
+            throw error;
+        }
     }
 
     setupLighting() {
@@ -622,6 +684,13 @@ export class Game {
     }
 
     render() {
+        if (!this.firstFrameRendered) {
+            console.log('🎮 FIRST FRAME RENDERING!');
+            console.log('Scene objects:', this.scene.children.length);
+            console.log('Camera position:', this.camera.position);
+            console.log('Renderer size:', this.renderer.getSize());
+            this.firstFrameRendered = true;
+        }
         this.renderer.render(this.scene, this.camera);
     }
 
