@@ -9,6 +9,10 @@
 </p>
 
 <p align="center">
+  🌐 <strong>Live Demo:</strong> <a href="https://vercel.com/phoenixs-projects-b770c793/phoenix-doom-warrior/">Play Now on Vercel</a>
+</p>
+
+<p align="center">
   <a href="https://phoenix-doom-warrior.vercel.app">🎮 Play Now</a> •
   <a href="#features">Features</a> •
   <a href="#how-to-play">How to Play</a> •
